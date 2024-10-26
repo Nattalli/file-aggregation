@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Список кампаній</title>
+</head>
+<body>
+    <h1>Список кампаній</h1>
+    <table border="1">
+        <tr>
+            <th>Advertiser</th>
+            <th>Brand</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Format</th>
+            <th>Platform</th>
+            <th>Impressions</th>
+        </tr>
+        {% for campaign in campaigns %}
+        <tr>
+            <td>{{ campaign.advertiser }}</td>
+            <td>{{ campaign.brand }}</td>
+            <td>{{ campaign.start_date }}</td>
+            <td>{{ campaign.end_date }}</td>
+            <td>{{ campaign.format }}</td>
+            <td>{{ campaign.platform }}</td>
+            <td>{{ campaign.impressions }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
