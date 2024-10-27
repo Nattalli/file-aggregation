@@ -1,13 +1,15 @@
 import pandas as pd
 from dateutil.parser import parse
 from django.contrib import messages
-from django.db.models import F, Sum, Avg, Max, Min, Count
+from django.db.models import F, Sum, Avg, Count
 from django.db.models.functions import Lower, TruncMonth
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.views import View
 
-from .forms import UploadFileForm
-from .models import Campaign, FileUpload
+from tables.forms import UploadFileForm
+from tables.models import Campaign, FileUpload
+from users.utils import log_to_model
 
 
 class FileUploadView(View):
@@ -23,6 +25,7 @@ class FileUploadView(View):
             file = request.FILES['file']
             try:
                 file_upload = FileUpload.objects.create()
+                log_to_model('INFO', f"Файл {file.name} завантажується користувачем {request.user.email}", self.request.user)
 
                 if file.name.endswith('.csv'):
                     df = pd.read_csv(file)
@@ -30,41 +33,46 @@ class FileUploadView(View):
                     df = pd.read_excel(file)
                 else:
                     messages.error(request, 'Непідтримуваний формат файлу.')
+                    log_to_model('WARNING', f"Непідтримуваний формат файлу: {file.name}", self.request.user)
                     return redirect('file_upload')
 
                 required_columns = {'Advertiser', 'Brand', 'Start', 'End', 'Format', 'Platform', 'Impr'}
                 if not required_columns.issubset(set(df.columns)):
                     messages.error(request, 'Некоректна структура файлу.')
+                    log_to_model('ERROR', f"Некоректна структура файлу: {file.name}", self.request.user)
                     return redirect('file_upload')
 
                 if df[['Start', 'End']].isnull().any().any():
                     messages.error(request, 'Некоректні або відсутні дані в колонках Start та/або End.')
+                    log_to_model('ERROR'f"Некоректні дані в колонках Start/End: {file.name}", self.request.user)
                     return redirect('file_upload')
 
                 for _, row in df.iterrows():
                     try:
                         start_date = parse(str(row['Start']), dayfirst=True)
                         end_date = parse(str(row['End']), dayfirst=True)
+                        Campaign.objects.create(
+                            file_upload=file_upload,
+                            advertiser=row['Advertiser'],
+                            brand=row['Brand'],
+                            start_date=start_date,
+                            end_date=end_date,
+                            format=row['Format'],
+                            platform=row['Platform'],
+                            impressions=row['Impr']
+                        )
                     except ValueError:
                         messages.error(request, f"Невірний формат дати в рядку: {row}")
+                        log_to_model('WARNING', f"Невірний формат дати в рядку: {row}", self.request.user)
                         continue
 
-                    Campaign.objects.create(
-                        file_upload=file_upload,
-                        advertiser=row['Advertiser'],
-                        brand=row['Brand'],
-                        start_date=start_date,
-                        end_date=end_date,
-                        format=row['Format'],
-                        platform=row['Platform'],
-                        impressions=row['Impr']
-                    )
-
                 messages.success(request, 'Файл успішно завантажено та оброблено.')
-                return redirect('aggregated_results')
+                log_to_model('INFO', f"Файл {file.name} успішно оброблено", self.request.user)
+                return redirect(reverse('aggregated_results', args=[file_upload.id]))
 
             except Exception as e:
                 messages.error(request, f'Помилка при обробці файлу: {e}')
+                log_to_model('ERROR', f"Помилка при обробці файлу {file.name}", self.request.user)
                 return redirect('file_upload')
 
         return render(request, self.template_name, {'form': form})
@@ -73,11 +81,17 @@ class FileUploadView(View):
 class AggregatedResultsView(View):
     template_name = 'aggregated_results.html'
 
-    def get(self, request):
-        last_upload = FileUpload.objects.last()
+    def get(self, request, file_upload_id):
+        try:
+            file_upload = FileUpload.objects.get(id=file_upload_id)
+        except FileUpload.DoesNotExist:
+            messages.error(request, 'Завантаження не знайдено.')
+            log_to_model('ERROR', f"Завантаження з ID {file_upload_id} не знайдено.", self.request.user)
+            return redirect('file_upload')
 
-        if last_upload:
-            campaigns = Campaign.objects.filter(file_upload=last_upload)
+        campaigns = Campaign.objects.filter(file_upload=file_upload)
+        if campaigns.exists():
+            log_to_model('INFO', f"Агрегування даних для файлу з ID {file_upload_id}", self.request.user)
 
             monthly_data = (
                 campaigns
@@ -157,6 +171,8 @@ class AggregatedResultsView(View):
 
             if other_total_impressions > 0:
                 top_20_brands.append({'brand_lower': 'Інше', 'total_impressions': other_total_impressions})
+
+            log_to_model('INFO', f"Агреговані дані для файлу з ID {file_upload_id} успішно обчислені", self.request.user)
         else:
             monthly_data = []
             yearly_totals = {}
@@ -166,6 +182,7 @@ class AggregatedResultsView(View):
             monthly_distribution = []
             top_20_brands = []
             top_5_advertisers = []
+            log_to_model('WARNING', f"Немає даних для файлу з ID {file_upload_id}", self.request.user)
 
         return render(request, self.template_name, {
             'monthly_data': monthly_data,

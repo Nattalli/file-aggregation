@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 
@@ -35,15 +36,25 @@ class User(AbstractUser):
         return self.role == self.USER_ROLE
 
 
-class FileUploadLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    file_name = models.CharField(max_length=255)
-    upload_date = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=50)
-    error_type = models.CharField(max_length=255, blank=True, null=True)
+class LogEntry(models.Model):
+    LEVEL_CHOICES = [
+        ('DEBUG', 'Debug'),
+        ('INFO', 'Info'),
+        ('WARNING', 'Warning'),
+        ('ERROR', 'Error'),
+        ('CRITICAL', 'Critical'),
+    ]
 
+    level = models.CharField(max_length=10, choices=LEVEL_CHOICES)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='custom_log_entries'
+    )
 
-class AccessLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    access_date = models.DateTimeField(auto_now_add=True)
-    level = models.CharField(max_length=10, choices=User.ROLE_CHOICES)
+    def __str__(self):
+        return f"[{self.timestamp}] {self.level}: {self.message}"
