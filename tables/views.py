@@ -1,7 +1,8 @@
 import pandas as pd
 from dateutil.parser import parse
 from django.contrib import messages
-from django.db.models import F, Sum, Avg, Count
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import F, Sum, Count
 from django.db.models.functions import Lower, TruncMonth
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -12,7 +13,7 @@ from tables.models import Campaign, FileUpload
 from users.utils import log_to_model
 
 
-class FileUploadView(View):
+class FileUploadView(LoginRequiredMixin, View):
     template_name = 'upload.html'
 
     def get(self, request):
@@ -78,7 +79,7 @@ class FileUploadView(View):
         return render(request, self.template_name, {'form': form})
 
 
-class AggregatedResultsView(View):
+class AggregatedResultsView(LoginRequiredMixin, View):
     template_name = 'aggregated_results.html'
 
     def get(self, request, file_upload_id):
