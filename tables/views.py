@@ -99,18 +99,18 @@ class AggregatedResultsView(View):
                 .values('month')
                 .annotate(
                     total_impressions=Sum('impressions'),
-                    avg_impressions_brand=Avg('impressions') / Count('brand', distinct=True),
-                    avg_impressions_platform=Avg('impressions') / Count('platform', distinct=True),
-                    avg_impressions_format=Avg('impressions') / Count('format', distinct=True)
+                    avg_impressions_brand=Sum('impressions') / Count('brand', distinct=True),
+                    avg_impressions_platform=Sum('impressions') / Count('platform', distinct=True),
+                    avg_impressions_format=Sum('impressions') / Count('format', distinct=True)
                 )
                 .order_by('month')
             )
 
             yearly_totals = campaigns.aggregate(
                 total_impressions=Sum('impressions'),
-                avg_impressions_brand=Avg('impressions') / Count('brand', distinct=True),
-                avg_impressions_platform=Avg('impressions') / Count('platform', distinct=True),
-                avg_impressions_format=Avg('impressions') / Count('format', distinct=True)
+                avg_impressions_brand=Sum('impressions') / Count('brand', distinct=True),
+                avg_impressions_platform=Sum('impressions') / Count('platform', distinct=True),
+                avg_impressions_format=Sum('impressions') / Count('format', distinct=True)
             )
 
             platform_distribution = (

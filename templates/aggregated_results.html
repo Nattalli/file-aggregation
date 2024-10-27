@@ -30,18 +30,18 @@
         {% for entry in monthly_data %}
         <tr>
             <td>{{ entry.month|date:"F Y" }}</td>
-            <td>{{ entry.total_impressions|floatformat:0|intcomma }}</td>
-            <td>{{ entry.avg_impressions_brand|floatformat:2|intcomma }}</td>
-            <td>{{ entry.avg_impressions_platform|floatformat:2|intcomma }}</td>
-            <td>{{ entry.avg_impressions_format|floatformat:2|intcomma }}</td>
+            <td>{{ entry.total_impressions|floatformat:0|intword }}</td>
+            <td>{{ entry.avg_impressions_brand|floatformat:0|intword }}</td>
+            <td>{{ entry.avg_impressions_platform|floatformat:0|intword }}</td>
+            <td>{{ entry.avg_impressions_format|floatformat:0|intword }}</td>
         </tr>
         {% endfor %}
         <tr class="total-row">
             <td>Загальна сума за рік</td>
-            <td>{{ yearly_totals.total_impressions|floatformat:0|intcomma }}</td>
-            <td>{{ yearly_totals.avg_impressions_brand|floatformat:2|intcomma }}</td>
-            <td>{{ yearly_totals.avg_impressions_platform|floatformat:2|intcomma }}</td>
-            <td>{{ yearly_totals.avg_impressions_format|floatformat:2|intcomma }}</td>
+            <td>{{ yearly_totals.total_impressions|floatformat:0|intword }}</td>
+            <td>{{ yearly_totals.avg_impressions_brand|floatformat:0|intword }}</td>
+            <td>{{ yearly_totals.avg_impressions_platform|floatformat:0|intword }}</td>
+            <td>{{ yearly_totals.avg_impressions_format|floatformat:0|intword }}</td>
         </tr>
     </table>
 
@@ -95,20 +95,10 @@
                 responsive: true,
                 plugins: {
                     legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = formatNumber(context.raw);
-                                if (context.label === 'Інше' && otherPlatforms.length > 0) {
-                                    label += ' (включає: ' + otherPlatforms.join(', ') + ')';
-                                }
-                                return label;
-                            }
-                        }
-                    },
                     datalabels: {
-                        anchor: 'end',
+                        anchor: 'start',
                         align: 'top',
+                        rotation: -90,
                         formatter: function(value) {
                             return formatNumber(value);
                         },
@@ -130,7 +120,6 @@
             },
             plugins: [ChartDataLabels]
         });
-
         const formatLabels = [{% for entry in format_distribution %}"{{ entry.format_lower }}",{% endfor %}];
         const formatData = [{% for entry in format_distribution %}{{ entry.total_impressions }},{% endfor %}];
         const totalImpressions = formatData.reduce((a, b) => a + b, 0);
@@ -183,15 +172,15 @@
                         callbacks: {
                             label: function(context) {
                                 let value = context.raw;
-                                let percentage = ((value / totalImpressions) * 100).toFixed(2);
+                                let percentage = ((value / totalImpressions) * 100).toFixed(0);
                                 return `${context.label}: ${formatNumber(value)} (${percentage}%)`;
                             }
                         }
                     },
                     datalabels: {
-                        color: '#fff',
+                        color: 'black',
                         formatter: function(value) {
-                            let percentage = ((value / totalImpressions) * 100).toFixed(2);
+                            let percentage = ((value / totalImpressions) * 100).toFixed(0);
                             return `${percentage}%`;
                         },
                         font: {
@@ -319,14 +308,15 @@
             plugins: {
                 legend: { display: false },
                 datalabels: {
-                    anchor: 'end',
+                    anchor: 'start',
                     align: 'top',
+                    rotation: -90,
                     formatter: function(value) {
                         return formatNumber(value);
                     },
                     font: {
                         weight: 'bold'
-                    }
+                    },
                 },
                 tooltip: {
                     callbacks: {
