@@ -1,0 +1,369 @@
+{% load humanize %}
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Агреговані результати</title>
+    <style>
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .chart-container {
+            width: 80%;
+            margin: 0 auto 40px auto;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+</head>
+<body>
+    <h1>Агреговані результати за місяцями</h1>
+
+    {% if monthly_data %}
+    <table>
+        <tr>
+            <th>Місяць</th>
+            <th>Загальна кількість показів</th>
+            <th>Середнє по брендах</th>
+            <th>Середнє по платформах</th>
+            <th>Середнє по форматах</th>
+        </tr>
+        {% for entry in monthly_data %}
+        <tr>
+            <td>{{ entry.month|date:"F Y" }}</td>
+            <td>{{ entry.total_impressions|floatformat:0|intcomma }}</td>
+            <td>{{ entry.avg_impressions_brand|floatformat:2|intcomma }}</td>
+            <td>{{ entry.avg_impressions_platform|floatformat:2|intcomma }}</td>
+            <td>{{ entry.avg_impressions_format|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="total-row">
+            <td>Загальна сума за рік</td>
+            <td>{{ yearly_totals.total_impressions|floatformat:0|intcomma }}</td>
+            <td>{{ yearly_totals.avg_impressions_brand|floatformat:2|intcomma }}</td>
+            <td>{{ yearly_totals.avg_impressions_platform|floatformat:2|intcomma }}</td>
+            <td>{{ yearly_totals.avg_impressions_format|floatformat:2|intcomma }}</td>
+        </tr>
+    </table>
+
+    <h2>ТОП-15 платформ</h2>
+    <div class="chart-container">
+        <canvas id="platformChart"></canvas>
+    </div>
+
+    <h2>Розподіл по форматах</h2>
+    <div class="chart-container" style="width: 400px; height: 400px; margin: 0 auto;">
+        <canvas id="formatChart"></canvas>
+    </div>
+
+    <h2>Розподіл по місяцях</h2>
+    <div class="chart-container">
+        <canvas id="monthlyChart"></canvas>
+    </div>
+
+    <h2>ТОП-5 рекламодавців</h2>
+    <div class="chart-container">
+        <canvas id="advertiserChart"></canvas>
+    </div>
+
+    <h2>ТОП-20 брендів</h2>
+    <div class="chart-container">
+        <canvas id="brandChart"></canvas>
+    </div>
+
+    <script>
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        }
+
+        const platformLabels = [{% for entry in top_15_platforms %}"{{ entry.platform_lower }}",{% endfor %}];
+        const platformData = [{% for entry in top_15_platforms %}{{ entry.total_impressions }},{% endfor %}];
+        const otherPlatforms = [{% for platform in other_platforms %}"{{ platform }}",{% endfor %}];
+
+        new Chart(document.getElementById('platformChart'), {
+            type: 'bar',
+            data: {
+                labels: platformLabels,
+                datasets: [{
+                    label: 'Impressions по платформах',
+                    data: platformData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = formatNumber(context.raw);
+                                if (context.label === 'Інше' && otherPlatforms.length > 0) {
+                                    label += ' (включає: ' + otherPlatforms.join(', ') + ')';
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatNumber(value);
+                        },
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatNumber(value);
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        const formatLabels = [{% for entry in format_distribution %}"{{ entry.format_lower }}",{% endfor %}];
+        const formatData = [{% for entry in format_distribution %}{{ entry.total_impressions }},{% endfor %}];
+        const totalImpressions = formatData.reduce((a, b) => a + b, 0);
+
+        const monthNames = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
+                            "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+
+        const monthLabels = [{% for entry in monthly_distribution %}monthNames[{{ entry.month }} - 1],{% endfor %}];
+        const monthData = [{% for entry in monthly_distribution %}{{ entry.total_impressions }},{% endfor %}];
+
+        const advertiserLabels = [{% for entry in top_5_advertisers %}"{{ entry.advertiser_lower }}",{% endfor %}];
+        const advertiserData = [{% for entry in top_5_advertisers %}{{ entry.total_impressions }},{% endfor %}];
+
+        const brandLabels = [{% for entry in top_20_brands %}"{{ entry.brand_lower }}",{% endfor %}];
+        const brandData = [{% for entry in top_20_brands %}{{ entry.total_impressions }},{% endfor %}];
+
+        new Chart(document.getElementById('formatChart'), {
+            type: 'doughnut',
+            data: {
+                labels: formatLabels,
+                datasets: [{
+                    label: 'Impressions по форматах',
+                    data: formatData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)',
+                        'rgba(255, 159, 64, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let value = context.raw;
+                                let percentage = ((value / totalImpressions) * 100).toFixed(2);
+                                return `${context.label}: ${formatNumber(value)} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        color: '#fff',
+                        formatter: function(value) {
+                            let percentage = ((value / totalImpressions) * 100).toFixed(2);
+                            return `${percentage}%`;
+                        },
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+         new Chart(document.getElementById('monthlyChart'), {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Impressions по місяцях',
+                    data: monthData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatNumber(value);
+                            },
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Місяці'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Кількість показів'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return formatNumber(value);
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        new Chart(document.getElementById('advertiserChart'), {
+            type: 'bar',
+            data: {
+                labels: advertiserLabels,
+                datasets: [{
+                    label: 'Impressions по рекламодавцях',
+                    data: advertiserData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        formatter: function(value) {
+                            return formatNumber(value);
+                        },
+                        font: {
+                            weight: 'bold'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return formatNumber(context.raw);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatNumber(value);
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        new Chart(document.getElementById('brandChart'), {
+        type: 'bar',
+        data: {
+            labels: brandLabels,
+            datasets: [{
+                label: 'Impressions по брендах',
+                data: brandData,
+                backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: function(value) {
+                        return formatNumber(value);
+                    },
+                    font: {
+                        weight: 'bold'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return formatNumber(context.raw);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+    </script>
+    {% else %}
+        <p>Немає даних для завантаження.</p>
+    {% endif %}
+</body>
+</html>
