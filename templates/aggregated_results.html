@@ -1,33 +1,21 @@
 {% load humanize %}
+{% load static %}
 
 <!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
     <title>Агреговані результати</title>
-    <style>
-        table {
-            width: 80%;
-            margin: 20px auto;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px;
-            border: 1px solid #ccc;
-            text-align: center;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .chart-container {
-            width: 80%;
-            margin: 0 auto 40px auto;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 </head>
 <body>
+    <div class="upload-button-container">
+        <a href="{% url 'file_upload' %}" class="upload-button">Завантажити нові дані</a>
+    </div>
+
+    <div class="container">
     <h1>Агреговані результати за місяцями</h1>
 
     {% if monthly_data %}
@@ -81,7 +69,7 @@
     <div class="chart-container">
         <canvas id="brandChart"></canvas>
     </div>
-
+  </div>
     <script>
         function formatNumber(num) {
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
@@ -222,8 +210,8 @@
                 datasets: [{
                     label: 'Impressions по місяцях',
                     data: monthData,
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderColor: 'rgb(182,59,87)',
+                    backgroundColor: 'rgb(255,99,132)',
                     borderWidth: 1
                 }]
             },
@@ -363,7 +351,7 @@
     });
     </script>
     {% else %}
-        <p>Немає даних для завантаження.</p>
+      <p class="message error">Немає даних для останнього завантаження.</p>
     {% endif %}
 </body>
 </html>
