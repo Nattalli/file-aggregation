@@ -77,8 +77,9 @@
 
 ![admin_panel_login_via_user.png](readme-media%2Fadmin_panel_login_via_user.png)
 
-### 7. Адміністративна панелі
+### 7. Адміністративна панель
 
+![admin_dashboard.png](readme-media%2Fadmin_dashboard.png)
 ![admin_table.png](readme-media%2Fadmin_table.png)
 ![admin_users_ibfo.png](readme-media%2Fadmin_users_ibfo.png)
 ![admin_logs.png](readme-media%2Fadmin_logs.png)
