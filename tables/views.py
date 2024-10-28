@@ -25,9 +25,6 @@ class FileUploadView(LoginRequiredMixin, View):
         if form.is_valid():
             file = request.FILES['file']
             try:
-                file_upload = FileUpload.objects.create()
-                log_to_model('INFO', f"Файл {file.name} завантажується користувачем {request.user.email}", self.request.user)
-
                 if file.name.endswith('.csv'):
                     df = pd.read_csv(file)
                 elif file.name.endswith(('.xls', '.xlsx')):
@@ -45,8 +42,10 @@ class FileUploadView(LoginRequiredMixin, View):
 
                 if df[['Start', 'End']].isnull().any().any():
                     messages.error(request, 'Некоректні або відсутні дані в колонках Start та/або End.')
-                    log_to_model('ERROR'f"Некоректні дані в колонках Start/End: {file.name}", self.request.user)
+                    log_to_model('ERROR', f"Некоректні дані в колонках Start/End: {file.name}", self.request.user)
                     return redirect('file_upload')
+
+                file_upload = FileUpload.objects.create()
 
                 for _, row in df.iterrows():
                     try:
@@ -63,8 +62,8 @@ class FileUploadView(LoginRequiredMixin, View):
                             impressions=row['Impr']
                         )
                     except ValueError:
-                        messages.error(request, f"Невірний формат дати в рядку: {row}")
-                        log_to_model('WARNING', f"Невірний формат дати в рядку: {row}", self.request.user)
+                        messages.error(request, f"Невірний формат дати в рядку: {row.to_dict()}")
+                        log_to_model('WARNING', f"Невірний формат дати в рядку: {row.to_dict()}", self.request.user)
                         continue
 
                 messages.success(request, 'Файл успішно завантажено та оброблено.')
@@ -73,7 +72,7 @@ class FileUploadView(LoginRequiredMixin, View):
 
             except Exception as e:
                 messages.error(request, f'Помилка при обробці файлу: {e}')
-                log_to_model('ERROR', f"Помилка при обробці файлу {file.name}", self.request.user)
+                log_to_model('ERROR', f"Помилка при обробці файлу {file.name}: {e}", self.request.user)
                 return redirect('file_upload')
 
         return render(request, self.template_name, {'form': form})
