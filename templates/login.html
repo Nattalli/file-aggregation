@@ -4,16 +4,28 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Вхід</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Логін</title>
+    <link rel="stylesheet" href="{% static 'auth_styles.css' %}">
 </head>
 <body>
-    <h1>Вхід</h1>
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Увійти</button>
-    </form>
-    <p>Немає акаунту? <a href="{% url 'register' %}">Зареєструватися</a></p>
+    <div class="login-container">
+        <h2>Вхід до системи</h2>
+        {% if form.errors %}
+            <div class="error-message">
+                <p>Невірне ім'я користувача або пароль. Спробуйте знову.</p>
+            </div>
+        {% endif %}
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="text" name="username" placeholder="Ім'я користувача" required>
+            <input type="password" name="password" placeholder="Пароль" required>
+            <button type="submit">Увійти</button>
+        </form>
+        <div class="register-redirect">
+            <p>Немає акаунту?</p>
+            <a href="{% url 'register' %}" class="register-button">Зареєструватися</a>
+        </div>
+    </div>
 </body>
 </html>
