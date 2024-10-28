@@ -56,8 +56,13 @@
     </div>
 
     <h2>Розподіл по місяцях</h2>
-    <div class="chart-container">
-        <canvas id="monthlyChart"></canvas>
+    <div class="chart-row">
+        <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+        <div class="chart-container" style="width: 400px; height: 400px; margin: 0 auto;">
+            <canvas id="monthlyDonutChart"></canvas>
+        </div>
     </div>
 
     <h2>ТОП-5 рекламодавців</h2>
@@ -241,6 +246,50 @@
                 }
             },
             plugins: [ChartDataLabels]
+        });
+
+         new Chart(document.getElementById('monthlyDonutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Impressions по місяцях',
+                    data: monthData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)',
+                        'rgba(255, 159, 64, 0.5)',
+                        'rgba(99, 255, 132, 0.5)',
+                        'rgba(162, 54, 235, 0.5)',
+                        'rgba(206, 255, 86, 0.5)',
+                        'rgba(192, 75, 192, 0.5)',
+                        'rgba(102, 153, 255, 0.5)',
+                        'rgba(159, 255, 64, 0.5)'
+                    ],
+                    borderColor: 'rgba(255, 255, 255, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    datalabels: {
+                        color: 'black',
+                        formatter: function(value) {
+                            let percentage = ((value / totalImpressions) * 100).toFixed(0);
+                            return `${percentage}%`;
+                        },
+                        font: {
+                            weight: 'bold'
+                        }
+                    }
+                }
+            },
+            plugins: [ChartDataLabels],
         });
 
         new Chart(document.getElementById('advertiserChart'), {
